@@ -1,0 +1,21 @@
+name: Pylint
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9"]
+    steps:
+        - name: wemake-python-styleguide
+          uses: wemake-services/wemake-python-styleguide@0.18.0
+            
