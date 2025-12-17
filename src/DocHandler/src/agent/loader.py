@@ -62,8 +62,9 @@ class Loader:
         for i, chunk_id in enumerate(chunks["ids"]):
             content = chunks["documents"][i]
             question_response = self.llm.judge(content)
-
+            ic(question_response)
             questions = question_response.questions
+            ic(questions)
             if len(questions) > 0:
                 embedding = self.embedder.embed(", ".join(questions))
             else:

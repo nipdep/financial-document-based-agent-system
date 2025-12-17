@@ -67,4 +67,5 @@ cython_debug/
 *.csv
 *.json
 *.txt
+*.pdf
 
