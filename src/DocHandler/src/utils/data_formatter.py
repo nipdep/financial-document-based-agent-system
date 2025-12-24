@@ -47,7 +47,7 @@ class DataFormatter(JSONSerializable):
         :rtype: BaseLoader
         """
         loaders = {
-            DataType.PDF_FILE: "chatgenie.loaders.pdf_file.PdfFileLoader",
+            DataType.PDF_FILE: "chatgenie.loaders.dockling_loader.DocklingLoader",
             DataType.QNA_PAIR: "chatgenie.loaders.local_qna_pair.LocalQnaPairLoader",
             DataType.TEXT: "chatgenie.loaders.local_text.LocalTextLoader",
             DataType.DOCX: "chatgenie.loaders.docx_file.DocxFileLoader",
@@ -65,7 +65,7 @@ class DataFormatter(JSONSerializable):
     def _get_chunker(self, data_type: DataType, config: ChunkerConfig) -> BaseChunker:
         """Returns the appropriate chunker for the given data type (updated for lazy loading)."""
         chunker_classes = {
-            DataType.PDF_FILE: "chatgenie.chunkers.pdf_file.PdfFileChunker",
+            DataType.PDF_FILE: "chatgenie.chunkers.mdx.MdxChunker",
             DataType.QNA_PAIR: "chatgenie.chunkers.qna_pair.QnaPairChunker",
             DataType.TEXT: "chatgenie.chunkers.text.TextChunker",
             DataType.DOCX: "chatgenie.chunkers.docx_file.DocxFileChunker",

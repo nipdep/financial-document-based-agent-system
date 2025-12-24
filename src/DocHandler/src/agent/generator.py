@@ -1,4 +1,4 @@
-from langchain.memory import ConversationBufferMemory, ConversationBufferWindowMemory
+from langchain_classic.memory import ConversationBufferMemory, ConversationBufferWindowMemory
 from chatgenie.llm.base import BaseLlm
 from chatgenie.utils.prompt_template import fill_template
 
