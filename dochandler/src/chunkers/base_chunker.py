@@ -1,10 +1,9 @@
 import hashlib
 
-from chatgenie.helper.json_serializable import JSONSerializable
-from chatgenie.utils.data_type import DataType
+from dochandler.src.utils.data_type import DataType
 
 
-class BaseChunker(JSONSerializable):
+class BaseChunker:
     def __init__(self, text_splitter):
         """Initialize the chunker."""
         self.text_splitter = text_splitter

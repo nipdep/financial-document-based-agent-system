@@ -1,18 +1,21 @@
-from typing import Optional, Union, List
+from typing import Optional, Union, List, Dict, Any
 
 import os
 import numpy as np
-from pymilvus import DataType, MilvusClient, MilvusException
+from urllib.parse import urlparse
+from pymilvus import connections, FieldSchema, CollectionSchema, DataType, Collection, utility, MilvusClient
 
-from chatgenie.vectordb.base import BaseVectorDB
+from cgcore.vectordb.base import BaseVectorDB
+from cgcore.configs.vectordb.milvus import MilvusConfig
 
 from icecream import ic
 import uuid
 
 class MilvusDB(BaseVectorDB):
-    def __init__(self, config):
+    def __init__(self, config: MilvusConfig):
         super().__init__(config)
         self._create_client()
+        
 
     def _create_client(self):
         self.client = MilvusClient(
@@ -20,32 +23,52 @@ class MilvusDB(BaseVectorDB):
             token=os.getenv("MILVUS_TOKEN", ""),
         )
         
+        # Parse host and port
+        milvus_url = os.getenv("MILVUS_URL", "localhost:19530")
+        u = urlparse(milvus_url if "://" in milvus_url else f"//{milvus_url}")
+        self.host = u.hostname or milvus_url
+        self.port = u.port or 19530
+        
+        print("MilvusClient connected.")
+        
         self.db = self.client
-
         self.collection_name = self.config.collection_name
 
         self._create_collection()
 
-    def _create_collection(self):
+    def _create_collection(self) -> Collection:
         """
         Checks if the collection exists. If not, creates it and adds a vector index.
         """
-        # Check if collection exists
-        if not self.client.has_collection(self.collection_name):
+        
+        try:
+            connections.connect(alias="default", host=self.host, port=str(self.port))
+            print(f"pymilvus ORM connected to {self.host}:{self.port} for setup.")
+        except Exception as e:
+            print(f"pymilvus ORM connection failed: {e}")
+            # If connection fails, we can't proceed with setup
+            raise e
+        
+        
+        
+        # Create question collection if it doesn't exist
+        if not utility.has_collection(self.collection_name):
             schema = self.client.create_schema(
-                auto_id=False,
+                auto_id=True,
                 enable_dynamic_field=True,
             )
             
             # 3.2. Add fields to schema
-            schema.add_field(field_name="_id", datatype=DataType.VARCHAR, is_primary=True, max_length=128)
             schema.add_field(
-                field_name="text_embedding", datatype=DataType.FLOAT_VECTOR, dim=int(self.config.dimensions)
-            )
-            schema.add_field(field_name="content", datatype=DataType.VARCHAR, max_length=65535)
+                field_name="_id", datatype=DataType.VARCHAR, is_primary=True, auto_id=True, max_length=128)
             schema.add_field(
-                field_name="meta_data", datatype=DataType.JSON, nullable=True
-            )
+                field_name="doc_id", datatype=DataType.VARCHAR, max_length=128)
+            schema.add_field(
+                field_name="vector", datatype=DataType.FLOAT_VECTOR, dim=int(self.config.dimensions))
+            schema.add_field(
+                field_name="content", datatype=DataType.VARCHAR, max_length=65535)
+            schema.add_field(
+                field_name="meta_data", datatype=DataType.JSON, nullable=True)
             
             index_params = self.client.prepare_index_params()
 
@@ -56,9 +79,14 @@ class MilvusDB(BaseVectorDB):
             )
 
             index_params.add_index(
-                field_name="text_embedding",
-                index_type="AUTOINDEX",
-                metric_type="COSINE"
+                field_name="vector",
+                index_type="HNSW", # Type of the index to create
+                index_name="vector_index", # Name of the index to create
+                metric_type="L2", # Metric type used to measure similarity
+                params={
+                    "M": 64, # Maximum number of neighbors each node can connect to in the graph
+                    "efConstruction": 100 # Number of candidate neighbors considered for connection during index construction
+                } # Index building params
             )
             
             
@@ -67,51 +95,31 @@ class MilvusDB(BaseVectorDB):
                 schema=schema,
                 index_params=index_params
             )
-            
+
             print(f"Collection '{self.collection_name}' created.")
+
         else:
             print(
                 f"Collection '{self.collection_name}' already exists. Skipping creation."
             )
 
-    def insert(self, text, embedding):
+    def insert(self, records: List[Dict[str, Any]]):
         """
-        Inserts a single document with its embedding.
+        Inserts one or more documents with their embeddings.
 
-        :param text: The original text.
-        :param embedding: A list representing the embedding vector.
+        :param records: List of document records with fields: vector, content, doc_id, meta_data.
+        :return: True if insertion successful, False otherwise.
         """
-        if len(embedding) != self.config.dimensions:
-            raise ValueError(f"Embedding must be of dimension {self.config.dimensions}")
 
-        # Generate a unique ID for the document
-        doc_id = str(uuid.uuid4())
-
-        doc = {"_id": doc_id, "content": text, "text_embedding": embedding}
-        self.client.insert(
-            collection_name=self.collection_name,
-            data=[doc],
-        )
-
-    def batch_insert(self, documents):
-        """
-        Inserts multiple documents with embeddings.
-
-        :param documents: A list of dictionaries with 'text' and 'vector' keys.
-        """
-        # ic(len(documents[0]["text_embedding"]))
-        # ic(self.config.dimensions)
-        for doc in documents:
-            if len(doc["text_embedding"]) != int(self.config.dimensions):
-                ic(len(doc["text_embedding"]), int(self.config.dimensions))
-                raise ValueError(
-                    f"Embedding must be of dimension {self.config.dimensions}"
-                )
-
-        self.client.insert(
-            collection_name=self.collection_name,
-            data=documents,
-        )
+        try:
+            self.client.insert(
+                collection_name=self.collection_name,
+                data=records
+            )
+            return True
+        except Exception as e:
+            print(f"[Milvus] Insert error: {e}")
+            return False
 
     def get(self, _id, **kwargs):
         """
@@ -156,14 +164,13 @@ class MilvusDB(BaseVectorDB):
         Retrieves the top-k most similar documents based on vector similarity.
         Returns format compatible with chatgenie library.
         """
-            
         if len(vector) != int(self.config.dimensions):
             raise ValueError(
                 f"Query embedding must be of dimension {int(self.config.dimensions)}"
             )
         
         if not kwargs.get("output_fields"):
-            kwargs["output_fields"] = ["text_embedding", "content", "_id", "meta_data"]
+            kwargs["output_fields"] = ["doc_id","vector", "content", "_id", "meta_data"]
 
         if not kwargs.get("filter"):
             res = self.client.search(
@@ -171,7 +178,7 @@ class MilvusDB(BaseVectorDB):
                 data=[vector],
                 limit=top_k,
                 output_fields=kwargs["output_fields"],
-                anns_field="text_embedding",
+                anns_field="vector",
                 search_params=kwargs.get("search_params", None),
             )
         else:
@@ -180,14 +187,12 @@ class MilvusDB(BaseVectorDB):
                 data=[vector],
                 limit=top_k,
                 output_fields=kwargs["output_fields"],
-                anns_field="text_embedding",
+                anns_field="vector",
                 search_params=kwargs.get("search_params", None),
                 filter=kwargs["filter"],
             )
-        
-        # print(f"[DEBUG] MilvusDB raw search result: {res}")
-    
-    # Convert MilvusDB result to chatgenie-compatible format
+
+        # Convert MilvusDB result to chatgenie-compatible format
         formatted_results = []
         
         if res and len(res) > 0:

@@ -4,10 +4,8 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from chatgenie.chunkers.base_chunker import BaseChunker
 from chatgenie.config.add_config import ChunkerConfig
-from chatgenie.helper.json_serializable import register_deserializable
 from typing import Optional, Dict, Any 
 
-@register_deserializable
 class MdxChunker(BaseChunker):
     def __init__(self, config=None):
         # Default to 1000 characters per chunk

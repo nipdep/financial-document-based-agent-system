@@ -1,5 +1,4 @@
-from chatgenie.embedder.base import BaseEmbedder
-
+from typing import List, Dict, Any
 
 class BaseVectorDB:
     """Base class for vector database."""
@@ -25,7 +24,7 @@ class BaseVectorDB:
         """
         raise NotImplementedError
     
-    def insert(self, text, embedding):
+    def insert(self, records: List[Dict[str, Any]]):
         """
         Insert a document into the database.
 
@@ -34,7 +33,7 @@ class BaseVectorDB:
         """
         raise NotImplementedError
     
-    def batch_insert(self, documents):
+    def batch_insert(self, text, embedding, **kwargs):
         """
         Insert multiple documents into the database.
 
@@ -59,7 +58,7 @@ class BaseVectorDB:
         """
         raise NotImplementedError
     
-    def query(self, pipeline):
+    def query(self, **kwargs):
         """
         Query the database for similar documents.
 
@@ -67,8 +66,8 @@ class BaseVectorDB:
         :param top_k: The number of similar documents to return
         """
         raise NotImplementedError
-    
-    def vector_search(self, query, top_k=3):
+
+    def vector_search(self, vector, top_k=3):
         """
         Search the database for similar vectors.
 
