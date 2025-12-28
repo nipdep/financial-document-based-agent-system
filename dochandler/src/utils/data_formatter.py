@@ -1,14 +1,14 @@
 from importlib import import_module
 
-from chatgenie.chunkers.base_chunker import BaseChunker
-from chatgenie.config.add_config import AddConfig
-from chatgenie.config.add_config import ChunkerConfig, LoaderConfig
-from chatgenie.helper.json_serializable import JSONSerializable
-from chatgenie.loaders.base_loader import BaseLoader
-from chatgenie.utils.data_type import DataType
+from cgcore.configs.add_config import AddConfig
+from cgcore.configs.add_config import ChunkerConfig, LoaderConfig
+from cgcore.utils.data_type import DataType
+
+from dochandler.src.chunkers.base_chunker import BaseChunker
+from dochandler.src.loader.base_loader import BaseLoader
 
 
-class DataFormatter(JSONSerializable):
+class DataFormatter:
     """
     DataFormatter is an internal utility class which abstracts the mapping for
     loaders and chunkers to the data_type entered by the user in their
@@ -47,7 +47,7 @@ class DataFormatter(JSONSerializable):
         :rtype: BaseLoader
         """
         loaders = {
-            DataType.PDF_FILE: "dochandler.src.dockling_loader.DocklingLoader",
+            DataType.PDF_FILE: "dochandler.src.loader.dockling_loader.DocklingLoader",
             DataType.QNA_PAIR: "chatgenie.loaders.local_qna_pair.LocalQnaPairLoader",
             DataType.TEXT: "chatgenie.loaders.local_text.LocalTextLoader",
             DataType.DOCX: "chatgenie.loaders.docx_file.DocxFileLoader",
