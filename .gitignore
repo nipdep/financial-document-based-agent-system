@@ -66,6 +66,5 @@ cython_debug/
 *.env
 *.csv
 *.json
-*.txt
 *.pdf
-
+.github/copilot-instructions.md
