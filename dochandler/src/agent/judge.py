@@ -1,8 +1,8 @@
 from pydantic import BaseModel
 from typing import Optional
 
-from chatgenie.llm.base import BaseLlm
-from chatgenie.utils.prompt_template import fill_template
+from cgcore.llm.base import BaseLlm
+from cgcore.utils.prompt_template import fill_template
 
 class Judge:
     def __init__(self, llm: BaseLlm, rule: BaseModel, prompt_template: Optional[str]=""):

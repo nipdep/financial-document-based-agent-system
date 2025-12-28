@@ -4,3 +4,5 @@ pymilvus
 icecream
 tqdm
 langchain
+langchain-classic
+langchain_openai

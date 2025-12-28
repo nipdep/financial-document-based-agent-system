@@ -2,7 +2,8 @@ from typing import Optional, Callable
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-from dochandler.src.chunkers.base_chunker import BaseChunker, ChunkerConfig
+from dochandler.src.chunkers.base_chunker import BaseChunker
+from cgcore.configs.add_config import ChunkerConfig
 
 class PdfFileChunker(BaseChunker):
     """Chunker for PDF file."""

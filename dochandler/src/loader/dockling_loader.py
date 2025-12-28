@@ -5,10 +5,7 @@ from typing import Dict, List, Optional
 from pathlib import Path
 
 # Assuming these base classes exist in your structure
-from chatgenie.loaders.base_loader import BaseLoader
-from chatgenie.helper.json_serializable import register_deserializable
-
-@register_deserializable
+from dochandler.src.loader.base_loader import BaseLoader
 
 class DocklingLoader(BaseLoader):
     def __init__(self,server_url: str = "http://localhost:8080/documents/convert",image_scale: int = 4, 

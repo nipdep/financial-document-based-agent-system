@@ -1,7 +1,7 @@
 import hashlib
 from typing import Optional, Callable
 
-from dochandler.src.utils.data_type import DataType
+from cgcore.utils.data_type import DataType
 from cgcore.configs.base_config import BaseConfig
 
 class ChunkerConfig(BaseConfig):

@@ -8,7 +8,7 @@ except ImportError:
     ) from None
     
 from dochandler.src.loader.base_loader import BaseLoader
-from dochandler.src.utils.utils import clean_string
+from cgcore.utils.utils import clean_string
 
 
 class PdfFileLoader(BaseLoader):

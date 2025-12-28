@@ -1,7 +1,7 @@
 from typing import Optional
 
 from langchain_openai import OpenAIEmbeddings
-from chatgenie.embedder.base import BaseEmbedder
+from cgcore.embedder.base import BaseEmbedder
 
 
 class OpenAIEmbedder(BaseEmbedder):

@@ -1,13 +1,12 @@
 from typing import Dict, Optional, List
 from pydantic import BaseModel, Field
 
-from chatgenie.vectordb.base import BaseVectorDB
-from chatgenie.embedder.base import BaseEmbedder
-from chatgenie.llm.base import BaseLlm
-from chatgenie.config.add_config import AddConfig
-from chatgenie.utils.data_formatter import DataFormatter
-from chatgenie.utils.data_type import detect_datatype
-from chatgenie.resources.transformations.clustering.density_base_cluster import DensityBasedCluster
+from cgcore.vectordb.base import BaseVectorDB
+from cgcore.embedder.base import BaseEmbedder
+from cgcore.llm.base import BaseLlm
+from cgcore.configs.add_config import AddConfig
+from dochandler.src.utils.data_formatter import DataFormatter
+from cgcore.utils.data_type import detect_datatype
 
 from icecream import ic
 
@@ -48,7 +47,7 @@ class Loader:
         
 
         if not self.dry_run:
-            self.db.batch_insert(records)
+            self.db.insert(records)
         else:
             return records
 
@@ -80,58 +79,6 @@ class Loader:
             )
 
         if not self.dry_run:
-            self.db.batch_insert(records)
+            self.db.insert(records)
         else:
             return records
-        
-    def extr_cluster_load(self, source: str, cluster:DensityBasedCluster, metadata: Optional[Dict] = {}):
-        data_type = detect_datatype(source)
-
-        data_formatter = DataFormatter(data_type, self.config)
-        chunks = data_formatter.chunker.create_chunks(data_formatter.loader, source)
-
-        records = []
-        for i, chunk_id in enumerate(chunks["ids"]):
-            content = chunks["documents"][i]
-            question_response = self.llm.judge(content)
-
-            questions = question_response.questions
-            
-            if len(questions) > 0:
-                for question in questions:
-                    embedding = self.embedder.embed(question)
-                    unq_id = cluster.update_db_index(chunk_id, question, embedding)
-                    records.append(
-                        {
-                            "_id": unq_id,
-                            "chunk_id": chunk_id,
-                            "content": content,
-                            "questions": question,
-                            "meta_data": chunks["metadatas"][i] | metadata,
-                            "text_embedding": embedding
-                        }
-                    )
-                    
-                    
-            else:
-                embedding = self.embedder.embed(content)
-                unq_id = cluster.update_db_index(chunk_id, question, embedding)
-                records.append(
-                        {
-                            "_id": unq_id,
-                            "chunk_id": chunk_id,
-                            "content": content,
-                            "questions": question,
-                            "meta_data": chunks["metadatas"][i] | metadata,
-                            "text_embedding": embedding
-                        }
-                    )
-            
-
-        if not self.dry_run:
-            self.db.batch_insert(records)
-        else:
-            return records 
-    
-
-        

@@ -1,4 +1,4 @@
-from chatgenie.llm.base import BaseLlm
+from cgcore.llm.base import BaseLlm
 from icecream import ic
 
 try:
