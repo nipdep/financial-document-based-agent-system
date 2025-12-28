@@ -68,3 +68,4 @@ cython_debug/
 *.json
 *.pdf
 .github/copilot-instructions.md
+.python-version

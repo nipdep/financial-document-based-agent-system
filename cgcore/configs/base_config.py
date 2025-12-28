@@ -1,0 +1,18 @@
+from typing import Any, Dict
+
+class BaseConfig:
+    """
+    Base config.
+    """
+
+    def __init__(self):
+        """Initializes a configuration class for a class."""
+        pass
+
+    def as_dict(self) -> Dict[str, Any]:
+        """Return config object as a dict
+
+        :return: config object as dict
+        :rtype: Dict[str, Any]
+        """
+        return vars(self)

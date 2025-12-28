@@ -3,3 +3,4 @@ numpy
 pymilvus
 icecream
 tqdm
+langchain
