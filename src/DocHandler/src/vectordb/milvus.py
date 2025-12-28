@@ -5,7 +5,6 @@ import numpy as np
 from pymilvus import DataType, MilvusClient, MilvusException
 
 from chatgenie.vectordb.base import BaseVectorDB
-from chatgenie.config.vectordb.mongo import MongoConfig
 
 from icecream import ic
 import uuid

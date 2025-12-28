@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import List
-from langchain.memory import ConversationBufferMemory, ConversationBufferWindowMemory
+from langchain_classic.memory import ConversationBufferMemory, ConversationBufferWindowMemory
 
 from chatgenie.rag.base import BaseRAG
 from chatgenie.config.rag.base import GeneralRAGConfig
