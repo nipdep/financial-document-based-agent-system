@@ -2,8 +2,7 @@ from typing import Optional
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from chatgenie.chunkers.base_chunker import BaseChunker
-from chatgenie.config.add_config import ChunkerConfig
+from dochandler.src.chunkers.base_chunker import BaseChunker
 from typing import Optional, Dict, Any 
 
 class MdxChunker(BaseChunker):

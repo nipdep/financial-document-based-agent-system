@@ -2,23 +2,7 @@ from typing import Optional, Callable
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-from dochandler.src.chunkers.base_chunker import BaseChunker
-from cgcore.configs.base_config import BaseConfig
-
-class ChunkerConfig(BaseConfig):
-    """
-    Config for the chunker used in `add` method
-    """
-
-    def __init__(
-        self,
-        chunk_size: Optional[int] = None,
-        chunk_overlap: Optional[int] = None,
-        length_function: Optional[Callable[[str], int]] = None,
-    ):
-        self.chunk_size = chunk_size if chunk_size else 2000
-        self.chunk_overlap = chunk_overlap if chunk_overlap else 0
-        self.length_function = length_function if length_function else len
+from dochandler.src.chunkers.base_chunker import BaseChunker, ChunkerConfig
 
 class PdfFileChunker(BaseChunker):
     """Chunker for PDF file."""
