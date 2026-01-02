@@ -2,8 +2,8 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 from langchain_classic.memory import ConversationBufferWindowMemory
 
-from QuestionAnswering.src.agent.generator import Generator
-from QuestionAnswering.src.agent.retriever import Retriever
+from finchat.src.agent.generator import Generator
+from finchat.src.agent.retriever import Retriever
 from dochandler.src.agent.judge import Judge
 from cgcore.helper.json_serializable import register_deserializable
 
