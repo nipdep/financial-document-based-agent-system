@@ -7,7 +7,7 @@ from cgcore.llm.base import BaseLlm
 from cgcore.configs.add_config import AddConfig
 from dochandler.src.utils.data_formatter import DataFormatter
 from cgcore.utils.data_type import detect_datatype
-
+import asyncio
 from icecream import ic
 
 class Loader:
@@ -25,12 +25,12 @@ class Loader:
         self.dry_run = dry_run
 
 
-    def simple_load(self, source: str, metadata: Optional[Dict] = {}):
+    async def simple_load(self, source: str, metadata: Optional[Dict] = {}):
         
         data_type = detect_datatype(source)
 
         data_formatter = DataFormatter(data_type, self.config)
-        chunks = data_formatter.chunker.create_chunks(data_formatter.loader, source)    
+        chunks = await data_formatter.chunker.create_chunks(data_formatter.loader, source)    
 
         records = []
         for i, chunk_id in enumerate(chunks["ids"]):
@@ -47,15 +47,15 @@ class Loader:
         
 
         if not self.dry_run:
-            self.db.insert(records)
+            await self.db.insert(records)
         else:
             return records
 
-    def extr_load(self, source: str, metadata: Optional[Dict] = {}):
+    async def extr_load(self, source: str, metadata: Optional[Dict] = {}):
         data_type = detect_datatype(source)
 
         data_formatter = DataFormatter(data_type, self.config)
-        chunks = data_formatter.chunker.create_chunks(data_formatter.loader, source)
+        chunks = await data_formatter.chunker.create_chunks(data_formatter.loader, source)
         doc_id = chunks.get("doc_id", "unknown_id")
         records = []
         for i, chunk_id in enumerate(chunks["ids"]):
@@ -82,7 +82,7 @@ class Loader:
             )
 
         if not self.dry_run:
-            success=self.db.insert(records)
+            success=await self.db.insert(records)
             if success:
                 print(f"Successfully inserted {len(records)} records into Milvus.")
             else:

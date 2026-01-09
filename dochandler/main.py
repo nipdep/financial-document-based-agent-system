@@ -29,5 +29,5 @@ class ExTrRAGDocHandler:
         self.loader = Loader(db=self.db, embedder=self.embedder, llm=question_generator)
         # loader.extr_load(source="data/obesity.txt")
 
-    def add_document(self, source, metadata={}):
-        self.loader.extr_load(source, metadata)
+    async def add_document(self, source, metadata={}):
+       return await self.loader.extr_load(source, metadata)

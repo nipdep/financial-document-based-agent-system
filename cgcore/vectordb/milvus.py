@@ -4,7 +4,7 @@ import os
 import numpy as np
 from urllib.parse import urlparse
 from pymilvus import connections, FieldSchema, CollectionSchema, DataType, Collection, utility, MilvusClient
-
+import asyncio
 from cgcore.vectordb.base import BaseVectorDB
 from cgcore.configs.vectordb.milvus import MilvusConfig
 
@@ -103,7 +103,7 @@ class MilvusDB(BaseVectorDB):
                 f"Collection '{self.collection_name}' already exists. Skipping creation."
             )
 
-    def insert(self, records: List[Dict[str, Any]]):
+    async def insert(self, records: List[Dict[str, Any]]):
         """
         Inserts one or more documents with their embeddings.
 
@@ -112,7 +112,8 @@ class MilvusDB(BaseVectorDB):
         """
 
         try:
-            self.client.insert(
+            await asyncio.to_thread(
+                self.client.insert,
                 collection_name=self.collection_name,
                 data=records
             )
@@ -121,7 +122,7 @@ class MilvusDB(BaseVectorDB):
             print(f"[Milvus] Insert error: {e}")
             return False
 
-    def get(self, _id, **kwargs):
+    async def get(self, _id, **kwargs):
         """
         Retrieves a document by its ID.
 
@@ -131,11 +132,12 @@ class MilvusDB(BaseVectorDB):
         
         if not kwargs.get("output_fields"):
             kwargs["output_fields"] = ["vector", "text", "id"]
-            
-        return self.client.query(
+
+        return await asyncio.to_thread(
+            self.client.query,
             collection_name=self.collection_name,
             ids=[_id],
-            output_fields=kwargs["output_fields"],
+            output_fields=kwargs.get("output_fields")
         )
 
     def query(self, **kwargs):  # XXX: to improve
@@ -159,7 +161,7 @@ class MilvusDB(BaseVectorDB):
         )
         return res
 
-    def vector_search(self, vector, top_k=5, **kwargs):
+    async def vector_search(self, vector, top_k=5, **kwargs):
         """
         Retrieves the top-k most similar documents based on vector similarity.
         Returns format compatible with chatgenie library.
@@ -171,27 +173,27 @@ class MilvusDB(BaseVectorDB):
         
         if not kwargs.get("output_fields"):
             kwargs["output_fields"] = ["doc_id","vector", "content", "_id", "meta_data"]
-
-        if not kwargs.get("filter"):
-            res = self.client.search(
-                collection_name=self.collection_name,
-                data=[vector],
-                limit=top_k,
-                output_fields=kwargs["output_fields"],
-                anns_field="vector",
-                search_params=kwargs.get("search_params", None),
-            )
-        else:
-            res = self.client.search(
-                collection_name=self.collection_name,
-                data=[vector],
-                limit=top_k,
-                output_fields=kwargs["output_fields"],
-                anns_field="vector",
-                search_params=kwargs.get("search_params", None),
-                filter=kwargs["filter"],
-            )
-
+        def _execute_search():
+            if not kwargs.get("filter"):
+                return self.client.search(
+                    collection_name=self.collection_name,
+                    data=[vector],
+                    limit=top_k,
+                    output_fields=kwargs["output_fields"],
+                    anns_field="vector",
+                    search_params=kwargs.get("search_params", None),
+                )
+            else:
+                return self.client.search(
+                    collection_name=self.collection_name,
+                    data=[vector],
+                    limit=top_k,
+                    output_fields=kwargs["output_fields"],
+                    anns_field="vector",
+                    search_params=kwargs.get("search_params", None),
+                    filter=kwargs["filter"],
+                )
+        res = await asyncio.to_thread(_execute_search)
         # Convert MilvusDB result to chatgenie-compatible format
         formatted_results = []
         
@@ -234,7 +236,7 @@ class MilvusDB(BaseVectorDB):
         print(f"[DEBUG] Returning {len(formatted_results)} formatted results")
         return formatted_results
 
-    def delete(self, _ids: list[str]):
+    async def delete(self, _ids: list[str]):
         """
         Deletes documents by their IDs.
 
@@ -243,7 +245,8 @@ class MilvusDB(BaseVectorDB):
         if not _ids:
             raise ValueError("List of IDs to delete cannot be empty")
 
-        self.client.delete(
+        await asyncio.to_thread(
+            self.client.delete,
             collection_name=self.collection_name,
             ids=_ids,
         )
