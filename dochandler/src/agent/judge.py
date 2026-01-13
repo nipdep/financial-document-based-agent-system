@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
-
+import asyncio
 from cgcore.llm.base import BaseLlm
 from cgcore.utils.prompt_template import fill_template
 
@@ -10,11 +10,11 @@ class Judge:
         self.rule = rule
         self.prompt_template = prompt_template
 
-    def judge(self, prompt: str) -> bool:
-        response = self.llm.structured_generate(prompt, self.rule)
+    async def judge(self, prompt: str) -> bool:
+        response = await self.llm.structured_generate(prompt, self.rule)
         return response
     
-    def judge_with_context(self, prompt: str, context: dict) -> bool:
+    async def judge_with_context(self, prompt: str, context: dict) -> bool:
         prompt = fill_template(self.prompt_template, prompt, context=context)
-        response = self.llm.structured_generate(prompt, self.rule)
+        response = await self.llm.structured_generate(prompt, self.rule)
         return response

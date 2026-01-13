@@ -1,7 +1,7 @@
 from typing import Optional
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel
-
+import asyncio
 class BaseLlm:
     def __init__(self, config):
         self.config = config
@@ -9,15 +9,15 @@ class BaseLlm:
     def _create_client(self):
         raise NotImplementedError
 
-    def generate(self, prompt, system_prompt="") -> str:
+    async def generate(self, prompt, system_prompt="") -> str:
         messages = []
         if system_prompt:
             messages.append(SystemMessage(content=system_prompt))
         messages.append(HumanMessage(content=prompt))
-        
-        return self.llm.invoke(messages).content
+        response = await asyncio.to_thread(self.llm.invoke, messages)
+        return response.content
 
-    def structured_generate(self, prompt: str, structure: BaseModel, system_prompt: Optional[str] = "") -> dict:
+    async def structured_generate(self, prompt: str, structure: BaseModel, system_prompt: Optional[str] = "") -> dict:
         structured_llm = self.llm.with_structured_output(structure)
 
         messages = []

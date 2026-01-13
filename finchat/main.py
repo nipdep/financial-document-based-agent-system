@@ -65,14 +65,14 @@ class ExTrRAGQA():
         current_context = self.context.load_memory_variables({})['history']
         ic(f"Current Context: {current_context}")
 
-        ruling = self.judge.judge_with_context(input_query, context=current_context)
+        ruling = await self.judge.judge_with_context(input_query, context=current_context)
         ic(ruling)
         
         related_context = ruling.related_context
         
         if ruling.decision:
             print("Decision: Sufficient context found in memory.")
-            response = self.generator.generate_with_context(input_query, related_context)
+            response = await self.generator.generate_with_context(input_query, related_context)
         else:
             print("Decision: Retrieving external documents...")
             extra_questions = ruling.extra_questions
@@ -92,6 +92,6 @@ class ExTrRAGQA():
                 new_content = ""
             
             updated_context = related_context + paragraph_list_to_str(new_content)
-            response = self.generator.generate_with_context(input_query, updated_context)
+            response = await self.generator.generate_with_context(input_query, updated_context)
             
         return response
