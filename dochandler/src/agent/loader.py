@@ -61,24 +61,31 @@ class Loader:
         for i, chunk_id in enumerate(chunks["ids"]):
             content = chunks["documents"][i]
             question_response = self.llm.judge(content)
-            ic(question_response)
             questions = question_response.questions
             ic(questions)
             if len(questions) > 0:
                 embedding = self.embedder.embed(", ".join(questions))
             else:
                 embedding = self.embedder.embed(content)
+            final_metadata = chunks["metadatas"][i].copy()
+            final_metadata.update(metadata)
+            final_metadata["questions"] = questions
+            final_metadata["original_chunk_id"] = chunk_id 
+
             records.append(
                 {
-                    "_id":              chunk_id,      
-                    "content":       content,       
-                    "text_embedding":      embedding,     
-                    "questions":       questions,
-                    "meta_data":       chunks["metadatas"][i] | metadata,
+                    "doc_id":         doc_id,           
+                    "vector":         embedding,        
+                    "content":        content,          
+                    "meta_data":      final_metadata    
                 }
             )
 
         if not self.dry_run:
-            self.db.insert(records)
+            success=self.db.insert(records)
+            if success:
+                print(f"Successfully inserted {len(records)} records into Milvus.")
+            else:
+                print(f"Failed to insert records. Check Milvus logs above.")
         else:
             return records

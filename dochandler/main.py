@@ -2,11 +2,13 @@ from pydantic import BaseModel, Field
 from typing import List
 from langchain_classic.memory import ConversationBufferMemory, ConversationBufferWindowMemory
 
+from cgcore.helper.json_serializable import register_deserializable
 from dochandler.src.agent.loader import Loader
 from dochandler.src.agent.judge import Judge
 
 from icecream import ic
 
+@register_deserializable
 class ExTrRAGDocHandler:
     def __init__(self, llm, db, embedder, memory="none", history=False):
         self.llm = llm
