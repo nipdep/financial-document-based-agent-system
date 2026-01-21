@@ -63,23 +63,34 @@ class Loader:
             question_response = self.llm.judge(content)
             questions = question_response.questions
             ic(questions)
-            if len(questions) > 0:
-                embedding = self.embedder.embed(", ".join(questions))
-            else:
-                embedding = self.embedder.embed(content)
             final_metadata = chunks["metadatas"][i].copy()
             final_metadata.update(metadata)
-            final_metadata["questions"] = questions
-            final_metadata["original_chunk_id"] = chunk_id 
-
-            records.append(
-                {
-                    "doc_id":         doc_id,           
-                    "vector":         embedding,        
-                    "content":        content,          
-                    "meta_data":      final_metadata    
-                }
-            )
+            final_metadata["original_chunk_id"] = chunk_id
+            
+            if len(questions) > 0:
+                for q in questions:
+                    embedding = self.embedder.embed(q)
+                    final_metadata["question"] = q
+                    records.append(
+                        {
+                            "doc_id":         doc_id,           
+                            "vector":         embedding,        
+                            "content":        content,          
+                            "meta_data":      final_metadata    
+                        }
+                    )
+                    
+            else:
+                embedding = self.embedder.embed(content)
+                final_metadata["questions"] = None
+                records.append(
+                    {
+                        "doc_id":         doc_id,           
+                        "vector":         embedding,        
+                        "content":        content,          
+                        "meta_data":      final_metadata    
+                    }
+                )
 
         if not self.dry_run:
             success=self.db.insert(records)

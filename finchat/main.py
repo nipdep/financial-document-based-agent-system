@@ -78,11 +78,13 @@ class ExTrRAGQA():
             extra_questions = ruling.extra_questions
             
             if len(extra_questions) > 0:
-                question_prompt = ", ".join(extra_questions)
+                related_docs = []
+                for question_prompt in extra_questions:
+                    related_docs.extend(self.retriever.simple_retrieve(question_prompt))
             else:
                 question_prompt = input_query
-            
-            related_docs = self.retriever.simple_retrieve(question_prompt)
+                related_docs = self.retriever.simple_retrieve(question_prompt)
+                
             updated_docs = [{k: v for k, v in r.items() if k != "vector"} for r in related_docs]
             ic(updated_docs)
 
