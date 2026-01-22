@@ -22,20 +22,19 @@ class MilvusDB(BaseVectorDB):
         )
         print("AsyncMilvusClient initialized.")
 
-        # 3. [MAGIC FIX] Start the connection immediately in the background
-        # This allows __init__ to finish, but the DB setup starts running NOW.
-        self._init_task = asyncio.create_task(self._create_collection())
+        # 3. [CHANGED] Do NOT start the task yet. Just set it to None.
+        # This prevents the DB from connecting until you actually ask for data.
+        self._init_task = None
 
     async def _create_collection(self):
         """
-        This runs in the background automatically.
+        Native async collection setup.
         """
         try:
             if await self.client.has_collection(self.collection_name):
                 print(f"Collection '{self.collection_name}' already exists. Skipping creation.")
                 return
 
-            # Schema creation
             schema = self.client.create_schema(
                 auto_id=True,
                 enable_dynamic_field=True,
@@ -70,12 +69,18 @@ class MilvusDB(BaseVectorDB):
 
     async def _ensure_ready(self):
         """
-        Ensures the background task is finished before we try to search/insert.
+        [CHANGED] If the task hasn't started yet, start it NOW.
+        Then wait for it to finish.
         """
+        if self._init_task is None:
+            # First time usage: Fire the background task
+            self._init_task = asyncio.create_task(self._create_collection())
+        
+        # Wait for the task (whether we just started it or it was running)
         await self._init_task
 
     async def insert(self, records: List[Dict[str, Any]]):
-        await self._ensure_ready() # Wait if setup is still running
+        await self._ensure_ready() # Triggers connection if not connected
         try:
             await self.client.insert(
                 collection_name=self.collection_name,
@@ -112,7 +117,7 @@ class MilvusDB(BaseVectorDB):
         )
 
     async def vector_search(self, vector, top_k=5, **kwargs):
-        await self._ensure_ready() # Wait if setup is still running
+        await self._ensure_ready()
         
         if len(vector) != int(self.config.dimensions):
             raise ValueError(f"Query embedding dimension mismatch.")
@@ -154,11 +159,11 @@ class MilvusDB(BaseVectorDB):
             collection_name=self.collection_name,
             filter=filter_expr
         )
+    
     async def delete_collection(self):
         """
         Completely deletes the entire collection.
         """
-        # Wait for any pending initialization to finish first
         await self._ensure_ready()
 
         try:
@@ -168,6 +173,6 @@ class MilvusDB(BaseVectorDB):
         except Exception as e:
             print(f"Error deleting collection '{self.collection_name}': {e}")
             return False
-        
+            
     async def close(self):
         await self.client.close()
