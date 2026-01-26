@@ -1,47 +1,55 @@
-from typing import Optional
-
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from typing import Optional, Dict, Any, List
+import asyncio
+# CHANGE: Import the Markdown splitter instead of the Recursive one
+from langchain_text_splitters import MarkdownHeaderTextSplitter
 
 from dochandler.src.chunkers.base_chunker import BaseChunker
-from typing import Optional, Dict, Any 
 
 class MdxChunker(BaseChunker):
     def __init__(self, config=None):
-        # Default to 1000 characters per chunk
-        self.chunk_size = config.chunk_size if config else 1000
-        self.chunk_overlap = config.chunk_overlap if config else 200
         
-        # tries to split on paragraphs (\n\n) first, then lines (\n), then spaces.
-        self.splitter = RecursiveCharacterTextSplitter(
-            chunk_size=self.chunk_size,
-            chunk_overlap=self.chunk_overlap,
-            separators=["\n\n", "\n", " ", ""] 
+        self.config = config
+        
+        self.headers_to_split_on = [
+            ("#", "Header 1"),
+            ("##", "Header 2"),
+            ("###", "Header 3"),
+        ]
+        
+        self.splitter = MarkdownHeaderTextSplitter(
+            headers_to_split_on=self.headers_to_split_on,
+            strip_headers=False 
         )
 
-    def create_chunks(self, loader, source) -> Dict[str, Any]:
-        # 1. LOAD: Get the huge Markdown string from DocklingLoader
-        raw_data = loader.load_data(source)
+    async def create_chunks(self, loader, source) -> Dict[str, Any]:
+       
+        raw_data = await loader.load_data(source)
         
         # Extract the single huge string
         full_text = raw_data['data'][0]['content']
         base_metadata = raw_data['data'][0]['meta_data']
         doc_id = raw_data['doc_id']
 
-        # create_documents expects a list of texts and list of metadatas
-        splits = self.splitter.create_documents(
-            texts=[full_text], 
-            metadatas=[base_metadata]
-        )
+        # Split based on Markdown Headers (#, ##, ###)
+        splits = self.splitter.split_text(full_text)
 
-        #FORMAT: Prepare standard dictionary
+        # Prepare standard dictionary
         ids = []
         documents = []
         metadatas = []
 
         for i, split in enumerate(splits):
             ids.append(f"{doc_id}_{i}")
+            
+            # The content is the text of the section
             documents.append(split.page_content)
-            metadatas.append(split.metadata)
+            
+            # MarkdownHeaderSplitter puts the headers into metadata (e.g., {'Header 1': 'Introduction'})
+            
+            combined_metadata = base_metadata.copy()
+            combined_metadata.update(split.metadata)
+            
+            metadatas.append(combined_metadata)
 
         return {
             "ids": ids,

@@ -6,7 +6,7 @@ from cgcore.utils.data_type import DataType
 
 from dochandler.src.chunkers.base_chunker import BaseChunker
 from dochandler.src.loader.base_loader import BaseLoader
-
+from dochandler.src.loader.pdf_file import PdfFileLoader 
 
 class DataFormatter:
     """
@@ -47,7 +47,7 @@ class DataFormatter:
         :rtype: BaseLoader
         """
         loaders = {
-            DataType.PDF_FILE: "dochandler.src.loader.dockling_loader.DocklingLoader",
+            DataType.PDF_FILE: "dochandler.src.loader.pdf_file.PdfFileLoader",
             DataType.QNA_PAIR: "chatgenie.loaders.local_qna_pair.LocalQnaPairLoader",
             DataType.TEXT: "chatgenie.loaders.local_text.LocalTextLoader",
             DataType.DOCX: "chatgenie.loaders.docx_file.DocxFileLoader",
@@ -58,7 +58,7 @@ class DataFormatter:
         }
         if data_type in loaders:
             loader_class: type = self._lazy_load(loaders[data_type])
-            return loader_class()
+            return loader_class(config)
         else:
             raise ValueError(f"Unsupported data type: {data_type}")
 

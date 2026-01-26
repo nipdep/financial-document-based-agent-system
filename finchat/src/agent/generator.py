@@ -1,7 +1,7 @@
 from langchain_classic.memory import ConversationBufferMemory, ConversationBufferWindowMemory
 from cgcore.llm.base import BaseLlm
 from cgcore.utils.prompt_template import fill_template
-
+import asyncio
 from langchain_core.caches import InMemoryCache
 from langchain_core.globals import set_llm_cache
 
@@ -32,24 +32,24 @@ class Generator:
         else:
             raise ValueError(f"Invalid memory type: {memory}")
 
-    def generate(self, input_query):
+    async def generate(self, input_query):
         if self.memory:
             memory = self.memory.load_memory_variables({})['history']
             prompt = fill_template(self.prompt_template, input_query, history=memory)
         else:
             prompt = fill_template(self.prompt_template, input_query)
-        response = self.llm.generate(prompt, self.system_prompt)
+        response =  await self.llm.generate(prompt, self.system_prompt)
         if self.memory:
             self.memory.save_context({"input_query": input_query}, {"output": response})
         return response
 
-    def generate_with_context(self, input_query, context):
+    async def generate_with_context(self, input_query, context):
         if self.memory:
             memory = self.memory.load_memory_variables({})['history']
             prompt = fill_template(self.prompt_template, input_query, history=memory, context=context)
         else:
             prompt = fill_template(self.prompt_template, input_query, context=context)
-        response = self.llm.generate(prompt, self.system_prompt)
+        response = await self.llm.generate(prompt, self.system_prompt)
         if self.memory:
             self.memory.save_context({"input_query": input_query}, {"output": response})
         return response
