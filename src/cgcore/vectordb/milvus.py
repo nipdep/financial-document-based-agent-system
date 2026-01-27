@@ -3,8 +3,8 @@ import os
 import asyncio
 from urllib.parse import urlparse
 from pymilvus import AsyncMilvusClient, DataType
-from cgcore.vectordb.base import BaseVectorDB
-from cgcore.configs.vectordb.milvus import MilvusConfig
+from src.cgcore.vectordb.base import BaseVectorDB
+from src.cgcore.configs.vectordb.milvus import MilvusConfig
 
 class MilvusDB(BaseVectorDB):
     def __init__(self, config: MilvusConfig):
