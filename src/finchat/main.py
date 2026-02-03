@@ -6,7 +6,7 @@ from src.finchat.src.agent.generator import Generator
 from src.finchat.src.agent.retriever import Retriever
 from src.dochandler.src.agent.judge import Judge
 from src.cgcore.helper.json_serializable import register_deserializable
-from src.cgcore.utils.utils import format_docs_with_citations
+from src.cgcore.utils.utils import format_docs_with_citations, extract_and_map_citations
 import asyncio
 from icecream import ic
 
@@ -47,13 +47,16 @@ class ExTrRAGQA():
 
         gen_template = """
             You are a helpful assistant. Use the following context documents to answer the query.
-            
-            The context is provided inside <document> tags. Each document has a specific index (e.g., [1]).
+            The context is provided inside <document> tags. Each document has a specific index (e.g., 1).
             
             RULES:
             1. You must answer the query using ONLY the provided documents.
-            2. When you state a fact, you MUST cite the source index using square brackets like [1] or [1][2].
-            3. If the answer is not in the documents, state that you do not know.
+            2. You MUST wrap the specific words or phrases that contain the answer in citation tags.
+            3. Format: <cite index="1">exact text from document</cite>
+            4. Do NOT use [1] at the end of sentences. Wrap the text itself.
+            
+            Example:
+            The company <cite index="1">revised the threshold to Rs. 1,000,000</cite> in 2008.
             
             Context:
             $context
@@ -61,6 +64,7 @@ class ExTrRAGQA():
             Query: $query
             
             Helpful Answer:
+            
             """
         system_prompt = "You are an retrieval oriented chatbot. You are asked to provide an answer based on the context provided."
         
@@ -104,22 +108,15 @@ class ExTrRAGQA():
             else:
                 new_context_str = ""
                 
-            for i, doc in enumerate(updated_docs):
-                    
-                   
-                    real_db_id = doc.get('_id')
-                    
-                    sources_to_return.append({
-                        "citation_index": i + 1,        
-                        "chunk_id": str(real_db_id),                         
-                        "filename": doc.get('metadata', {}).get('original_filename', 'Unknown'),
-                        "content": doc.get('content', '')
-                    })
-
             updated_context = f"{related_context}\n\n{new_context_str}"
+        
+            # 2. Generate Answer (LLM returns text with <cite> tags)
             response_text = await self.generator.generate_with_context(input_query, updated_context)
             
-        return {
-            "answer": response_text,
-            "sources": sources_to_return
-        }
+            # 3. Extract Sources (Output)
+            # This scans response_text for <cite index="1"> and matches it to updated_docs
+            final_sources = extract_and_map_citations(response_text, updated_docs)
+            return {
+                "answer": response_text,
+                "sources": final_sources
+            }
