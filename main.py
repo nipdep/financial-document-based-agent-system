@@ -56,7 +56,7 @@ async def cleanup_expired_data():
                                 if hasattr(agent_instance, 'db') and hasattr(agent_instance.db, 'collection_name'):
                                     collection_name = agent_instance.db.collection_name
                                     if collection_name != "Agent_permanent":  
-                                        collection_deleted = agent_instance.db.delete_collection()
+                                        collection_deleted = await agent_instance.db.delete_collection()
                                         if collection_deleted:
                                             print(f"Agent {agent_id_to_delete}: Regular collection '{collection_name}' deleted")
                                         else:
