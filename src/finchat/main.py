@@ -6,8 +6,7 @@ from src.finchat.src.agent.generator import Generator
 from src.finchat.src.agent.retriever import Retriever
 from src.dochandler.src.agent.judge import Judge
 from src.cgcore.helper.json_serializable import register_deserializable
-
-from src.cgcore.utils.utils import paragraph_list_to_str 
+from src.cgcore.utils.utils import format_docs_with_citations, extract_and_map_citations
 import asyncio
 from icecream import ic
 
@@ -47,10 +46,25 @@ class ExTrRAGQA():
         self.retriever = Retriever(db=self.db, embedder=self.embedder)
 
         gen_template = """
-            Use the following pieces of context to answer the query at the end.
-            Context: $context
+            You are a helpful assistant. Use the following context documents to answer the query.
+            The context is provided inside <document> tags. Each document has a specific index (e.g., 1).
+            
+            RULES:
+            1. You must answer the query using ONLY the provided documents.
+            2. You MUST wrap the specific words or phrases that contain the answer in citation tags.
+            3. Format: <cite index="1">exact text from document</cite>
+            4. Do NOT use [1] at the end of sentences. Wrap the text itself.
+            
+            Example:
+            The company <cite index="1">revised the threshold to Rs. 1,000,000</cite> in 2008.
+            
+            Context:
+            $context
+            
             Query: $query
+            
             Helpful Answer:
+            
             """
         system_prompt = "You are an retrieval oriented chatbot. You are asked to provide an answer based on the context provided."
         
@@ -69,7 +83,7 @@ class ExTrRAGQA():
         ic(ruling)
         
         related_context = ruling.related_context
-        
+        sources_to_return = []
         if ruling.decision:
             print("Decision: Sufficient context found in memory.")
             response = await self.generator.generate_with_context(input_query, related_context)
@@ -82,16 +96,27 @@ class ExTrRAGQA():
             else:
                 question_prompt = input_query
             
+            # 1. Get the docs
             related_docs = await self.retriever.simple_retrieve(question_prompt)
             updated_docs = [{k: v for k, v in r.items() if k != "vector"} for r in related_docs]
             ic(updated_docs)
 
-            if related_docs:
-                new_content = [d['content'] for d in related_docs]
+
+            # We pass 'updated_docs' (the full dictionaries) so the formatter can see filenames
+            if updated_docs:
+                new_context_str = format_docs_with_citations(updated_docs)
             else:
-                new_content = ""
+                new_context_str = ""
+                
+            updated_context = f"{related_context}\n\n{new_context_str}"
+        
+            # 2. Generate Answer (LLM returns text with <cite> tags)
+            response_text = await self.generator.generate_with_context(input_query, updated_context)
             
-            updated_context = related_context + paragraph_list_to_str(new_content)
-            response = await self.generator.generate_with_context(input_query, updated_context)
-            
-        return response
+            # 3. Extract Sources (Output)
+            # This scans response_text for <cite index="1"> and matches it to updated_docs
+            final_sources = extract_and_map_citations(response_text, updated_docs)
+            return {
+                "answer": response_text,
+                "sources": final_sources
+            }

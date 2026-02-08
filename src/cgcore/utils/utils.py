@@ -4,6 +4,8 @@ from urllib.parse import urlparse
 import os
 import string
 import logging
+from typing import List, Dict, Any
+import re
 
 def format_source(source: str, limit: int = 20) -> str:
     """
@@ -67,6 +69,58 @@ def is_readable(s):
 def paragraph_list_to_str(paragraph_list: List[str]) -> str:
     return "\n".join(paragraph_list)
 
+
+def format_docs_with_citations(docs: List[Dict]) -> str:
+    """
+    Turns a list of docs into an XML-like string for the LLM.
+    Example Output:
+    <document index="1">
+    Content: The net profit was $500.
+    Source: report.pdf
+    </document>
+    """
+    formatted_str = ""
+    for i, doc in enumerate(docs):
+        # We use i+1 so the citations start at [1] instead of [0]
+        content = doc.get('content', '').strip()
+        source_name = doc.get('metadata', {}).get('original_filename', 'Unknown')
+        
+        formatted_str += f"""<document index="{i+1}">
+        Content: {content}
+        Source: {source_name}
+        </document>\n\n"""
+                
+    return formatted_str
+
+
+def extract_and_map_citations(response_text: str, retrieved_docs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Parses the LLM response for XML citation tags (e.g., <cite index="1">) 
+    and maps them to the original document metadata.
+    """
+    # 1. Regex to find the index inside the XML tag
+    # Matches <cite index="1"> or <cite index='1'>
+    used_indices = set(re.findall(r'<cite index=[\'"](\d+)[\'"]>', response_text))
+    
+    final_sources = []
+    
+    # 2. Map indices back to real documents
+    for i, doc in enumerate(retrieved_docs):
+        citation_idx = str(i + 1) # Matches the '1' in index="1"
+        
+        
+        # Safely get IDs
+        real_db_id = doc.get('_id') or doc.get('id')
+        
+        # Create the source object
+        source_obj = {
+            "citation_index": int(citation_idx),
+            "chunk_id": str(real_db_id),
+            "content": doc.get('content', '')
+        }
+        final_sources.append(source_obj)
+            
+    return final_sources
 
 def is_url(path):
     """
