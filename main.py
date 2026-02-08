@@ -1,4 +1,5 @@
 import os
+import sqlite3
 import uvicorn
 import asyncio
 from contextlib import asynccontextmanager
@@ -18,6 +19,7 @@ from app.src.jwt_manager import jwt_manager,JWTSessionData,get_jwt_session_no_up
 import app.server as server
 from app.server.memory_agent import AgentHandler
 from app.server.fshandler import FSHandler
+from app.src.data_type import FeedbackRequest, TestSummary, TestDetail
 from app.server.schemas.agent import AgentChatSchema
 from app.src.session_manager import SessionData, BasicVerifier
 from zoneinfo import ZoneInfo
@@ -304,6 +306,118 @@ async def test_chat(
             "response": "Error occurred during testing",
             "error": str(e)
         }
+
+@app.post("/save_feedback")
+async def save_feedback(
+    payload: FeedbackRequest,
+    session_data: JWTSessionData = Depends(get_jwt_session_no_update)
+):
+    """Save feedback for a chat response"""
+    try:
+        conn = sqlite3.connect("chatbot_feedback.db")
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA foreign_keys = ON;")
+        
+        timestamp = int(datetime.now(timezone.utc).timestamp())
+        
+        cursor.execute("""
+            INSERT INTO test (agent_id, timestamp, prompt, response, response_feedback, comment)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (payload.agent_id, timestamp, payload.prompt, payload.response, payload.response_feedback, payload.comment))
+        
+        test_id = cursor.lastrowid
+        
+        if payload.sources:
+            chunk_data = [
+                (test_id, source.citation_index, source.content, source.chunk_feedback)
+                for source in payload.sources
+            ]
+            cursor.executemany("""
+                INSERT INTO chunks (test_id, citation_index, content, chunk_feedback)
+                VALUES (?, ?, ?, ?)
+            """, chunk_data)
+            
+        conn.commit()
+        conn.close()
+        return {"msg": "Feedback saved successfully"}
+    except Exception as e:
+        print(f"[ERROR] Failed to save feedback: {e}")
+        return {
+            "msg": "Failed to save feedback",
+            "error": str(e)
+        }
+
+@app.get("/tests/{agent_id}", response_model=List[TestSummary])
+async def get_agent_tests(agent_id: int):
+    """List all tests for a specific agent"""
+    try:
+        conn = sqlite3.connect("chatbot_feedback.db")
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT id, prompt, timestamp, response_feedback FROM test WHERE agent_id = ? ORDER BY timestamp DESC", 
+            (agent_id,)
+        )
+        rows = cursor.fetchall()
+        conn.close()
+        
+        return [
+            TestSummary(
+                id=row[0], 
+                prompt=row[1], 
+                timestamp=row[2], 
+                response_feedback=row[3]
+            ) for row in rows
+        ]
+    except Exception as e:
+        print(f"[ERROR] Failed to fetch tests: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/test_details/{test_id}", response_model=TestDetail)
+async def get_test_details(test_id: int):
+    """Get detailed information for a specific test"""
+    try:
+        conn = sqlite3.connect("chatbot_feedback.db")
+        cursor = conn.cursor()
+        
+        # Fetch test details
+        cursor.execute(
+            "SELECT id, agent_id, timestamp, prompt, response, response_feedback, comment FROM test WHERE id = ?", 
+            (test_id,)
+        )
+        test_row = cursor.fetchone()
+        
+        if not test_row:
+            conn.close()
+            raise HTTPException(status_code=404, detail="Test not found")
+            
+        # Fetch associated chunks
+        cursor.execute(
+            "SELECT citation_index, content, chunk_feedback FROM chunks WHERE test_id = ? ORDER BY citation_index ASC", 
+            (test_id,)
+        )
+        chunk_rows = cursor.fetchall()
+        conn.close()
+        
+        chunks = [
+            {"citation_index": row[0], "content": row[1], "chunk_feedback": row[2]} 
+            for row in chunk_rows
+        ]
+        
+        return TestDetail(
+            id=test_row[0],
+            agent_id=test_row[1],
+            timestamp=test_row[2],
+            prompt=test_row[3],
+            response=test_row[4],
+            response_feedback=test_row[5],
+            comment=test_row[6],
+            chunks=chunks
+        )
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        print(f"[ERROR] Failed to fetch test details: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/end_session")
 async def end_session(
