@@ -69,3 +69,7 @@ cython_debug/
 *.pdf
 .github/copilot-instructions.md
 .python-version
+
+
+# sqlite db
+chatbot_feedback.db
