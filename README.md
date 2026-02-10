@@ -10,7 +10,7 @@
 Step 1 - Clone the repository
 
 ```bash
-git clone https://github.com/ixd-ai-hub/financial-document-based-agent-system.git
+git clone -b test-dashboard-backend https://github.com/ixd-ai-hub/financial-document-based-agent-system.git
 cd \path\to\root\folder
 ```
 
