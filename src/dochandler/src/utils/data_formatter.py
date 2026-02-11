@@ -48,6 +48,8 @@ class DataFormatter:
         """
         loaders = {
             DataType.PDF_FILE: "src.dochandler.src.loader.pdf_file.PdfFileLoader",
+            DataType.CSV: "src.dochandler.src.loader.csv.CsvLoader",
+            DataType.DOCX: "src.dochandler.src.loader.docx_file.DocxFileLoader"
         }
         if data_type in loaders:
             loader_class: type = self._lazy_load(loaders[data_type])
@@ -59,6 +61,8 @@ class DataFormatter:
         """Returns the appropriate chunker for the given data type (updated for lazy loading)."""
         chunker_classes = {
             DataType.PDF_FILE: "src.dochandler.src.chunkers.mdx.MdxChunker",
+            DataType.CSV: "src.dochandler.src.chunkers.mdx.MdxChunker",
+            DataType.DOCX: "src.dochandler.src.chunkers.mdx.MdxChunker"
         }
 
         if data_type in chunker_classes:
