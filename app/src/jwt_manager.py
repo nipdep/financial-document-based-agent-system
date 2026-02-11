@@ -115,7 +115,7 @@ class JWTManager:
 # Global JWT manager instance
 jwt_manager = JWTManager(
     secret_key=os.getenv("SESSION_PRIVATE_KEY", "secret-key"),
-    expiration_seconds=900 # 15 minutes
+    expiration_seconds=None
 )
 
 def get_jwt_session_no_update(authorization: str = Header(None)) -> JWTSessionData:
