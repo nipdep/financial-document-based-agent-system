@@ -45,6 +45,7 @@ Step 6 - Create the sqlite db
 ```bash
 python3 create_db.py # linux
 python create_db.py # windows
+```
 
 Step 6 - Start the development server with uvicorn
 
