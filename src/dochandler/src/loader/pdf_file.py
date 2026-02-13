@@ -4,7 +4,7 @@ try:
     from langchain_community.document_loaders import PyPDFLoader
 except ImportError:
     raise ImportError(
-        'PDF File requires extra dependencies. Install with `pip install --upgrade "chatgenie[dataloaders]"`'
+        'PDF File requires extra dependencies. Install with `pip install --upgrade "chatgenie[dataloaders]"`' #XXX: @DevinDeSilva why this error suggest to install `chatgenie` (which doesn't pip resolve) when langchain-community is no loading
     ) from None
     
 from src.dochandler.src.loader.base_loader import BaseLoader

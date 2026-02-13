@@ -277,7 +277,7 @@ async def test_chat(
                 "response": "No such agent found",
                 "error": "Agent not found"
             }
-        agent_instance = AGENTS.agent_dict[agent_id]
+        agent_instance = AGENTS.agent_dict[agent_id] #XXX @Osh0721 why is this variable `agent_instance` is not
     
     try:
        
