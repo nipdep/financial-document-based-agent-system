@@ -5,4 +5,5 @@ icecream
 tqdm
 langchain
 langchain-classic
-langchain_openai
+langchain-openai
+langchain-community
